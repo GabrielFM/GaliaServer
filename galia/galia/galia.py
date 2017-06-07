@@ -3,6 +3,7 @@ import os
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash
 import time
+import cv2
 
 from gpio_96boards import GPIO
 
@@ -34,9 +35,18 @@ def __show_entries():
             time.sleep(1)
     return render_template('home.html', valor1=1, valor2=0)
 
+@app.route('/cam')
+def __getFrame():
+    cam = cv2.VideoCapture(2)
+        
+    ret, frame = cam.read()
+    if ret:    
+        cv2.imwrite("galia/galia/static/picture.png",frame)    
+    return render_template('cam_layout.html')
 
 @app.route('/')
 def show_entries():
+    
     valor1 = 500
     valor2 = 600
     return render_template('home.html', valor1=valor1, valor2=valor2)
