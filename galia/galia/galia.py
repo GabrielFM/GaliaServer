@@ -2,17 +2,14 @@
 import os
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash
+from celery import Celery
 import time
 import cv2
 
 from gpio_96boards import GPIO
-
-
-
-
+	
 app = Flask(__name__) # create the application instance :)
 app.config.from_object(__name__) # load config from this file , flaskr.py
-
 
 # Load default config and override config from an environment variable
 app.config.update(dict(
@@ -23,16 +20,30 @@ app.config.update(dict(
 ))
 app.config.from_envvar('GALIA_SETTINGS', silent=True)
 
+# Celery config
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
+celery.autodiscover_tasks()
+
+@celery.task()
+def waterPlants(sec = 10):
+    """Turn on the pump for s seconds"""
+    releID = GPIO.gpio_id('GPIO_A')
+    rele = ((releID, 'out'),)
+    with GPIO(rele) as gpio:
+	    gpio.digital_write(releID, GPIO.HIGH)
+	    time.sleep(sec)
+	    gpio.digital_write(releID, GPIO.LOW)
+	    time.sleep(1)
+    return 1
+
+
+
 @app.route('/casa')
 def __show_entries():
-    GPIO_A = GPIO.gpio_id('GPIO_A')
-    pins = ((GPIO_A, 'out'),)
-    with GPIO(pins) as gpio:
-        for i in range(5):
-            gpio.digital_write(GPIO_A, GPIO.HIGH)
-            time.sleep(i)
-            gpio.digital_write(GPIO_A, GPIO.LOW)
-            time.sleep(1)
+    waterPlants.delay();
     return render_template('home.html', valor1=1, valor2=0)
 
 @app.route('/cam')
