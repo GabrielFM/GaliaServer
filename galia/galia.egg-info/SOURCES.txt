@@ -7,3 +7,6 @@ galia.egg-info/SOURCES.txt
 galia.egg-info/dependency_links.txt
 galia.egg-info/requires.txt
 galia.egg-info/top_level.txt
+galia/static/style.css
+galia/templates/home.html
+galia/templates/layout.html
