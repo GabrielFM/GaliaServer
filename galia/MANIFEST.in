@@ -1,0 +1,3 @@
+graft galia/templates
+graft galia/static
+include galia/schema.sql
