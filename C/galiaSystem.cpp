@@ -14,27 +14,29 @@
 #include "libsoc_gpio.h"
 #include "libsoc_debug.h"
 #include "mraa.hpp"
+#include <iostream>
+#include <fstream>
 
+// GPIO Defines
 #define GPIO_A 23
-#define GPIO_B 24
-#define GPIO_C 25
-#define GPIO_D 26
-#define GPIO_E 27
-#define GPIO_F 28
-#define GPIO_G 29
-#define GPIO_H 30
-#define GPIO_I 31
-#define GPIO_J 32
-#define GPIO_K 33
-#define GPIO_L 34
+#define GPIO_CS 18
 
-
+// Analog Read Defines
 #define ADC1_A0 0x80 // Luminosidade - A0
 #define ADC1_A1 0x90 // Sensor Nivel de Agua - A1 
 #define ADC2_A2 0xA0 // Sensor de Temperatura e Umidade - A2
 #define ADC2_A3 0xB0 // Sensor de Umidade do solo - A3
  
-#define GPIO_CS 18
+std::string terminal = "curl --data \"username=Rasperna&password=GaliaRules& ";
+std::string url = "https://galiasystem.herokuapp.com/infoUpdate";
+std::string temp = "-1";
+std::string pump = "false";
+std::string umidity = "-1";
+std::string lum = "-1";
+std::string water_level = "-1";
+std::string ground_umi = "-1"; 
+std::string e = "&";
+std::string response = ">> response.txt";
 
 static uint8_t tx[3],rx[3];
 gpio *gpio_cs;
@@ -84,12 +86,10 @@ int main() {
     mraa::Gpio* gpio;
     gpio = new mraa::Gpio(GPIO_A);
     gpio->dir(mraa::DIR_OUT);
-
-    int lum = 0;
-	int waterLevel = 0;
 	int tempVolts = 0;
-	int groundUmi = 0;
-    float tempCelsius = 0;
+	float tempCelsius = 0;
+	std::string relay_state;
+
     libsoc_set_debug(0);
 
     gpio_cs = libsoc_gpio_request(GPIO_CS,LS_SHARED);
@@ -123,24 +123,44 @@ int main() {
 
 	while(1) 
 	{
-	    //waterPlants(gpio);
-	    
-		lum = getAnalogValue(ADC1_A0);
-		printf("Luminosidade:%d\n",lum);
+		lum = std::to_string(getAnalogValue(ADC1_A0));
 		
-		waterLevel = getAnalogValue(ADC1_A1);
-		printf("Water Level:%d\n", waterLevel);
+		std::cout<<"Luminosidade: "<<lum<<std::endl;
+		
+		water_level = std::to_string(getAnalogValue(ADC1_A1));
+		std::cout<<"Water Level: "<<water_level<<std::endl;
 
 		tempVolts = getAnalogValue(ADC2_A2);
 		convertVoltsToCelcius(tempVolts, tempCelsius);
-		printf("Temp: %f (°c)\n", tempCelsius);
 		
-		groundUmi = getAnalogValue(ADC2_A3);
-		printf("GroundUmi:%d\n",groundUmi);
+		temp = std::to_string(tempCelsius);
+		std::cout<<"Temp: "<<temp<<" (°c)"<<std::endl;
+		
+		ground_umi = std::to_string(getAnalogValue(ADC2_A3));
+		
+		std::cout<<"GroundUmi: "<<ground_umi<<std::endl;
+		
+		FILE *pump;		
+		pump = fopen("response.txt","w");		
+		fclose(pump);
 
+		std::string post = terminal+"temp="+temp+e+"ground_umi="+ground_umi+e+"lum="+lum+e+"water_level="+water_level+"\" " + url + response;
 
+		std::cout<<std::endl<<post<<std::endl;
+    	system(post.c_str());
 
-		sleep(1);
+		ifstream file;
+		file.open("response.txt");
+		file >> relay_state;
+		file.close();
+		std::cout << "Relay State: "<< relay_state[0] << std::endl;		
+		/*
+		if(relay_state == 1)
+			waterPlants(gpio);
+		*/
+		
+
+		sleep(2);
 	}
 
    free:
