@@ -59,26 +59,14 @@ int getAnalogValue(int txValue)
 	return varReturn;
 }
 
-void separateData(int tempUmi, float &temp, float &umid)
+void convertVoltsToCelcius(int &tempVolts, float &tempCelsius)
 {
-	/*
-	uint8_t aux = 0;
-	
-	umid = (tempUmi & 0xFF)*(70/512.5);
-	temp = (((tempUmi >> 16) & 0xFF));*/
-	
-
-	// TEST CHECKSUM
-	// bits[1] && bits[3] both 0
-
+	float aux = tempVolts;
+	aux *= 5.0;
+	aux /= 1024.0;
+ 	tempCelsius = (aux - 0.5) * 100; 
 }
  
-/*
-temp 0 - 50 °c
-acu +-2°c
-hum = 20 - 90%RH  - 70
-hum +-5%RH
-*/
 void waterPlants(mraa::Gpio *gpio, int sec=10);
 void waterPlants(mraa::Gpio *gpio, int sec)
 {
@@ -99,10 +87,9 @@ int main() {
 
     int lum = 0;
 	int waterLevel = 0;
-	int tempUmi = 0;
+	int tempVolts = 0;
 	int groundUmi = 0;
-    float temp = 0;
-	float umid = 0;
+    float tempCelsius = 0;
     libsoc_set_debug(0);
 
     gpio_cs = libsoc_gpio_request(GPIO_CS,LS_SHARED);
@@ -136,7 +123,7 @@ int main() {
 
 	while(1) 
 	{
-	    waterPlants(gpio);
+	    //waterPlants(gpio);
 	    
 		lum = getAnalogValue(ADC1_A0);
 		printf("Luminosidade:%d\n",lum);
@@ -144,16 +131,14 @@ int main() {
 		waterLevel = getAnalogValue(ADC1_A1);
 		printf("Water Level:%d\n", waterLevel);
 
-		tempUmi = getAnalogValue(ADC2_A2);
-		printf("TempUmi:%d\n", tempUmi);
+		tempVolts = getAnalogValue(ADC2_A2);
+		convertVoltsToCelcius(tempVolts, tempCelsius);
+		printf("Temp: %f (°c)\n", tempCelsius);
 		
-
 		groundUmi = getAnalogValue(ADC2_A3);
 		printf("GroundUmi:%d\n",groundUmi);
 
 
-		separateData(tempUmi,temp,umid);
-		printf("Temp:%f and Umid:%f\n\n",temp,umid);
 
 		sleep(1);
 	}
